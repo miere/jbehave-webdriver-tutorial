@@ -32,7 +32,7 @@ In a directory etsy-stories/target/view, a page named 'navigator.html' has been 
 
 ## Related
 
-See also the [jbehave-web](jbehave-web) sister project for web extensions to JBehave, and [jbehave-tutorial](jbehave-tutorial) for a decent example of JBehave testing of a web application.
+See also the [jbehave-web](http://github.com/jbehave/jbehave-web) sister project for web extensions to JBehave, and [jbehave-tutorial](http://github.com/jbehave/jbehave-tutorial) for a decent example of JBehave testing of a web application.
 
 ## License
 
