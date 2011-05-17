@@ -1,13 +1,9 @@
 package org.jbehave.tutorials.etsy;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Future;
-
 import org.jbehave.core.annotations.AfterStories;
 import org.jbehave.core.configuration.Configuration;
 import org.jbehave.core.embedder.Embedder;
+import org.jbehave.core.embedder.StoryControls;
 import org.jbehave.core.failures.BatchFailures;
 import org.jbehave.core.failures.FailingUponPendingStep;
 import org.jbehave.core.io.CodeLocations;
@@ -17,25 +13,27 @@ import org.jbehave.core.junit.JUnitStories;
 import org.jbehave.core.reporters.CrossReference;
 import org.jbehave.core.reporters.Format;
 import org.jbehave.core.reporters.StoryReporterBuilder;
-import org.jbehave.core.steps.CandidateSteps;
-import org.jbehave.core.steps.InstanceStepsFactory;
 import org.jbehave.core.steps.StepMonitor;
 import org.jbehave.core.steps.pico.PicoStepsFactory;
 import org.jbehave.web.queue.WebQueue;
 import org.jbehave.web.queue.WebQueueConfiguration;
 import org.jbehave.web.selenium.ContextView;
+import org.jbehave.web.selenium.FirefoxWebDriverProvider;
 import org.jbehave.web.selenium.LocalFrameContextView;
 import org.jbehave.web.selenium.PerStoryWebDriverSteps;
+import org.jbehave.web.selenium.RemoteWebDriverProvider;
 import org.jbehave.web.selenium.SauceContextOutput;
 import org.jbehave.web.selenium.SauceWebDriverProvider;
 import org.jbehave.web.selenium.SeleniumConfiguration;
 import org.jbehave.web.selenium.SeleniumContext;
 import org.jbehave.web.selenium.SeleniumContextOutput;
 import org.jbehave.web.selenium.SeleniumStepMonitor;
-import org.jbehave.web.selenium.TypeWebDriverProvider;
 import org.jbehave.web.selenium.WebDriverProvider;
 import org.jbehave.web.selenium.WebDriverScreenshotOnFailure;
 import org.picocontainer.Characteristics;
+import org.picocontainer.ComponentFactory;
+import org.picocontainer.MutablePicoContainer;
+import org.picocontainer.PicoBuilder;
 import org.picocontainer.behaviors.ThreadCaching;
 import org.picocontainer.classname.ClassLoadingPicoContainer;
 import org.picocontainer.classname.ClassName;
@@ -43,6 +41,11 @@ import org.picocontainer.classname.DefaultClassLoadingPicoContainer;
 import org.picocontainer.injectors.CompositeInjection;
 import org.picocontainer.injectors.ConstructorInjection;
 import org.picocontainer.injectors.SetterInjection;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Future;
 
 import static java.util.Arrays.asList;
 import static org.jbehave.core.io.CodeLocations.codeLocationFromClass;
@@ -56,71 +59,77 @@ public class EtsyDotComStories extends JUnitStories {
     private ContextView contextView;
     private SeleniumContext seleniumContext = new SeleniumContext();
     private Format[] outputFormats;
-    private final CrossReference crossReference = new CrossReference()
-            .withJsonOnly()
-            .withOutputAfterEachStory(true);
-
+    private String metaFilter;
+    private final CrossReference crossReference = new CrossReference() {
+        public String getMetaFilter() {
+            return metaFilter;
+        }
+    }.withJsonOnly().withOutputAfterEachStory(true);
 
     public EtsyDotComStories() {
 
         if (System.getProperty("SAUCE_USERNAME") != null) {
             driverProvider = new SauceWebDriverProvider();
-            outputFormats = new Format[] { WEB_DRIVER_HTML };
+            outputFormats = new Format[] { CONSOLE, WEB_DRIVER_HTML };
             crossReference.withThreadSafeDelegateFormat(new SauceContextOutput(driverProvider));
+            contextView = new ContextView.NULL();
+        } else if (System.getProperty("REMOTE") != null) {
+            driverProvider = new RemoteWebDriverProvider();
+            outputFormats = new Format[] { CONSOLE, WEB_DRIVER_HTML };
             contextView = new ContextView.NULL();
         } else {
             outputFormats = new Format[] { new SeleniumContextOutput(seleniumContext), CONSOLE, WEB_DRIVER_HTML };
-            driverProvider = new TypeWebDriverProvider();
+            driverProvider = new FirefoxWebDriverProvider();
             contextView = new LocalFrameContextView().sized(640, 120);
         }
 
         crossReference.excludingStoriesWithNoExecutedScenarios(true);
 
         StoryReporterBuilder storyReporterBuilder = new StoryReporterBuilder()
-                .withCodeLocation(CodeLocations.codeLocationFromClass(EtsyDotComStories.class))
-                .withFailureTrace(true)
-                .withFailureTraceCompression(true)
-                .withDefaultFormats()
-                .withFormats(outputFormats)
+                .withCodeLocation(CodeLocations.codeLocationFromClass(EtsyDotComStories.class)).withFailureTrace(true)
+                .withFailureTraceCompression(true).withDefaultFormats().withFormats(outputFormats)
                 .withCrossReference(crossReference);
 
         addCrossReference(storyReporterBuilder, crossReference);
 
         configuration = new SeleniumConfiguration().useWebDriverProvider(driverProvider)
-                .useSeleniumContext(seleniumContext)
-                .useFailureStrategy(new FailingUponPendingStep())
+                .useSeleniumContext(seleniumContext).useFailureStrategy(new FailingUponPendingStep())
+                .useStoryControls(new StoryControls().doResetStateBeforeScenario(false))
                 .useStepMonitor(createStepMonitor())
                 .useStoryLoader(new LoadFromClasspath(EtsyDotComStories.class.getClassLoader()))
                 .useStoryReporterBuilder(storyReporterBuilder);
 
         useConfiguration(configuration);
 
-        List<CandidateSteps> steps = new ArrayList<CandidateSteps>();
-        // Before And After Steps
-        steps.addAll(new InstanceStepsFactory(configuration, new PerStoryWebDriverSteps(driverProvider),
-                new PerStoriesContextView(contextView), new WebDriverScreenshotOnFailure(driverProvider, configuration
-                        .storyReporterBuilder())).createCandidateSteps());
-        // Groovy Steps
-        final DefaultClassLoadingPicoContainer container = new DefaultClassLoadingPicoContainer(
-                new ThreadCaching().wrap(new CompositeInjection(new ConstructorInjection(), new SetterInjection()
-                        .withInjectionOptional())));
-        container.change(Characteristics.USE_NAMES);
-        container.addComponent(WebDriverProvider.class, driverProvider);
-        // This loads all the Groovy classes in the 'pages' package
-        container.visit(new ClassName("pages.Home"), ".*\\.class", true,
+        final MutablePicoContainer primordial = new PicoBuilder().withBehaviors(new ThreadCaching()).build();
+        primordial.addComponent(WebDriverProvider.class, driverProvider);
+        // multiThreaded.addComponent(...);
+
+        // Groovy Steps - can be stateful per story.
+        ComponentFactory cf = new ThreadCaching().wrap(new CompositeInjection(new ConstructorInjection(),
+                new SetterInjection("set", "setMetaClass")));
+        ClassLoader currentClassLoader = this.getClass().getClassLoader();
+        final DefaultClassLoadingPicoContainer pageObjects = new DefaultClassLoadingPicoContainer(currentClassLoader, cf, primordial);
+        pageObjects.change(Characteristics.USE_NAMES);
+        // This loads all the Groovy page objects - can be stateful
+        pageObjects.visit(new ClassName("pages.Home"), ".*\\.class", true,
                 new DefaultClassLoadingPicoContainer.ClassVisitor() {
                     public void classFound(@SuppressWarnings("rawtypes") Class clazz) {
-                        container.addComponent(clazz);
+                        pageObjects.addComponent(clazz);
                     }
                 });
 
-        ClassLoadingPicoContainer steps1 = container.makeChildContainer("steps");
-        steps1.addComponent(new ClassName("housekeeping.EmptyCartIfNotAlready"));
-        steps1.addComponent(new ClassName("EtsyDotComSteps"));
+        ClassLoadingPicoContainer steps = pageObjects.makeChildContainer("steps");
+        steps.addComponent(new ClassName("housekeeping.EmptyCartIfNotAlready"));
+        steps.addComponent(new ClassName("EtsyDotComSteps"));
+        // Before And After Steps registered by instance
+        steps.addComponent(new PerStoryWebDriverSteps(driverProvider));
+        steps.addComponent(new WebDriverScreenshotOnFailure(driverProvider, configuration.storyReporterBuilder()));
+        steps.addComponent(new PerStoriesContextView(contextView));
 
-        steps.addAll(new PicoStepsFactory(configuration, steps1).createCandidateSteps());
-        addSteps(steps);
+        useStepsFactory(new PicoStepsFactory(configuration, steps));
 
+        // configuredEmbedder().embedderControls().doIgnoreFailureInStories(false);
 
     }
 
@@ -134,6 +143,11 @@ public class EtsyDotComStories extends JUnitStories {
 
     @Override
     public void run() {
+
+        // only available post instantiation because of the way the jbehave
+        // maven plugin
+        // decorates an instance with configuration
+        metaFilter = super.configuredEmbedder().metaFilters().toString();
 
         Embedder embedder = configuredEmbedder();
         if (System.getProperty("WEB_QUEUE") != null) {
@@ -171,7 +185,7 @@ public class EtsyDotComStories extends JUnitStories {
         if (System.getProperty("WEB_QUEUE") != null) {
             return new ArrayList<String>();
         }
-        return new StoryFinder().findPaths(codeLocationFromClass(this.getClass()).getFile(), asList("**/stories/**/"
+        return new StoryFinder().findPaths(codeLocationFromClass(this.getClass()).getFile(), asList("**/"
                 + storyFilter() + ".story"), null);
     }
 

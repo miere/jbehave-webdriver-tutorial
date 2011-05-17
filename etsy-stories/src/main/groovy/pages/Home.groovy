@@ -9,6 +9,7 @@ class Home extends BasePage{
     super(webDriverProvider)
   }
 
+
   def go() {
     get("http://www.etsy.com")
   }

@@ -6,8 +6,8 @@ import org.jbehave.web.selenium.WebDriverProvider
 
 public class BasePage extends WebDriverPage {
 
-  public BasePage(WebDriverProvider driverProvider) {
-    super(driverProvider)
+  public BasePage(WebDriverProvider webDriverProvider) {
+    super(webDriverProvider)
     GrooBe.activate()
   }
 }
