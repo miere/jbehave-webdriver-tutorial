@@ -1,17 +1,15 @@
-package housekeeping
-
 import org.jbehave.core.annotations.BeforeScenario
 import org.jbehave.web.selenium.WebDriverProvider
 import org.openqa.selenium.WebDriverException
 
-class EmptyCartIfNotAlready {
+class HousekeepingSteps {
 
   WebDriverProvider webDriverProvider;
 
   @BeforeScenario
   def emptyCart() {
     try {
-      webDriverProvider.get().manage().deleteCookieNamed("cart")
+      webDriverProvider.get().manage().deleteCookieNamed("uaid")
     } catch (WebDriverException e) {
       // tis OK
     }

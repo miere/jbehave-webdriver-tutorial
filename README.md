@@ -1,12 +1,12 @@
-# JBehave WebDriver Tutorial
+# JBehave Tutorials
 
-Running JBehave and WebDriver against pre-existing website [etsy.com](http://etsy.com)
+Using [jbehave-core](jbehave-core) and [jbehave-web](jbehave-web) against pre-existing website [etsy.com](http://etsy.com)
 
 <img src="http://jbehave.org/reference/preview/images/jbehave-logo.png" alt="JBehave logo" align="right" />
 
-## Running
+## Modules
 
-Firstly, cd into etsy-stories
+Firstly, cd into etsy-stories-groovy-pico
 
 This will run the build and (after a minute or so) Firefox will open and test the etsy.com website:
 
