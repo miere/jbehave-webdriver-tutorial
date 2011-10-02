@@ -11,16 +11,17 @@ class SearchResults extends BasePage{
 
 
   def buyFirst(String thing) {
-    List elems = getElems()
-    for (int i = 0; i < elems.size(); i++) {
-      def elem = elems.get(i)
+    List elements = getElems()
+    for (int i = 0; i < elements.size(); i++) {
+      def elem = elements.get(i)
       def title = elem.getAttribute("title")
       if (title.toLowerCase().contains(thing.toLowerCase())) {
+        // traverse into detail
         elem.click()
         def ix = getCurrentUrl().indexOf("/listing/") + 9
         def id = getCurrentUrl().substring(ix, ix + 8)
         id.isNumber().shouldBe true, "no listing found"
-        def buyButton = findElements(By.xpath("//input[@value = 'Add to Cart']")).get(0)
+        def buyButton = $("input", value : 'Add to Cart').firstElement()
         buyButton.click()
         return id
       }

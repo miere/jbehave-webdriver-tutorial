@@ -27,6 +27,7 @@ import org.jbehave.web.selenium.LocalFrameContextView;
 import org.jbehave.web.selenium.PerStoryWebDriverSteps;
 import org.jbehave.web.selenium.RemoteWebDriverProvider;
 import org.jbehave.web.selenium.SauceContextOutput;
+import org.jbehave.web.selenium.SauceLabsContextView;
 import org.jbehave.web.selenium.SauceWebDriverProvider;
 import org.jbehave.web.selenium.SeleniumConfiguration;
 import org.jbehave.web.selenium.SeleniumContext;
@@ -69,9 +70,9 @@ public class EtsyDotComStories extends JUnitStories {
         ContextView contextView;
         if (System.getProperty("SAUCE_USERNAME") != null) {
             driverProvider = new SauceWebDriverProvider();
-            formats = new Format[] { CONSOLE, WEB_DRIVER_HTML };
-            contextView = new ContextView.NULL();
-            crossReference.withThreadSafeDelegateFormat(new SauceContextOutput(driverProvider));
+            formats = new Format[] { new SeleniumContextOutput(seleniumContext), CONSOLE, WEB_DRIVER_HTML };
+            contextView = new SauceLabsContextView(driverProvider);
+            crossReference.withThreadSafeDelegateFormat(new SauceContextOutput(driverProvider, seleniumContext));
         } else if (System.getProperty("REMOTE") != null) {
             driverProvider = new RemoteWebDriverProvider();
             formats = new Format[] { CONSOLE, WEB_DRIVER_HTML };
@@ -88,9 +89,10 @@ public class EtsyDotComStories extends JUnitStories {
                 .withCrossReference(crossReference);
 
         Configuration configuration = new SeleniumConfiguration().useWebDriverProvider(driverProvider)
-                .useSeleniumContext(seleniumContext).useFailureStrategy(new FailingUponPendingStep())
+                .useSeleniumContext(seleniumContext)
+                .useFailureStrategy(new FailingUponPendingStep())
                 .useStoryControls(new StoryControls().doResetStateBeforeScenario(false))
-                .useStepMonitor(new SeleniumStepMonitor(contextView, new SeleniumContext(), crossReference.getStepMonitor()))
+                .useStepMonitor(new SeleniumStepMonitor(contextView, seleniumContext, crossReference.getStepMonitor()))
                 .useStoryLoader(new LoadFromClasspath(EtsyDotComStories.class))
                 .useStoryReporterBuilder(reporterBuilder);
         useConfiguration(configuration);
